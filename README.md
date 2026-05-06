@@ -1,8 +1,8 @@
 ---
 title: Global Ireland Visa Checker
-emoji: 🇮🇪
+emoji: 🌍
 colorFrom: green
-colorTo: white
+colorTo: blue
 sdk: streamlit
 sdk_version: 1.44.1
 app_file: app.py
