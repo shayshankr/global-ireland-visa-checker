@@ -131,15 +131,6 @@ with st.expander("ℹ️ How to use this tool"):
     7. #irelandvisaresult #ireland #AIforgood #studentinireland #irelandeducation #NCIcollege #NCI
     """)
 
-# ── Error fallback ────────────────────────────────────────────────────────────
-with st.expander("⚠️ If any error click on me"):
-    st.markdown("""
-    1. Visit the [original website](https://www.ireland.ie) and check your embassy page directly.
-    2. Mostly the error is due to the file not being available on the server.
-       Once the embassy website has the file, this application will work.
-    3. Try the individual embassy apps if one embassy is causing issues.
-    """)
-
 with st.spinner("Loading visa decisions from all embassies…"):
     all_data = load_all_embassies()
 
@@ -324,5 +315,18 @@ st.download_button(
     file_name="ireland_visa_decisions_all.csv",
     mime="text/csv",
 )
+
+# ── Error fallback ────────────────────────────────────────────────────────────
+with st.expander("⚠️ If any error click on me"):
+    st.markdown("""
+    1. Check the individual embassy links below and download the file directly:
+       - 🇮🇳 [New Delhi](https://www.ireland.ie/en/india/newdelhi/services/visas/processing-times-and-decisions/)
+       - 🇨🇳 [Beijing](https://www.ireland.ie/en/china/beijing/services/visas/visa-decisions/)
+       - 🇳🇬 [Abuja](https://www.ireland.ie/en/nigeria/abuja/services/visas/weekly-decision-reports/)
+       - 🇦🇪 [Abu Dhabi](https://www.ireland.ie/en/uae/abudhabi/services/visas/weekly-decision-reports/)
+       - 🇹🇷 [Ankara](https://www.ireland.ie/en/turkiye/ankara/services/visas/weekly-decision-report/)
+    2. Mostly the error is due to the file not being available on the server.
+       Once the embassy website has the file, this application will work.
+    """)
 
 st.caption("Data refreshes every hour · Sources: ireland.ie")
