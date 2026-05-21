@@ -119,6 +119,27 @@ def load_all_embassies() -> dict:
 st.title("🇮🇪 Ireland Visa Decision Checker")
 st.caption("All Embassies · Data sourced from ireland.ie")
 
+# ── How to use ────────────────────────────────────────────────────────────────
+with st.expander("ℹ️ How to use this tool"):
+    st.markdown("""
+    1. Enter your 8-digit application number like `83276171` or with prefix `IRL83276171`
+    2. Get instant status check across all embassies — New Delhi, Beijing, Abuja, Abu Dhabi, Ankara.
+    3. See nearest processed numbers if yours isn't found.
+    4. Please share with your family and friends this application.
+    5. More than 4130+ people have used this application as of April 2026. Last week usage 200 people.
+    6. Contact the developer if any issues while using this application.
+    7. #irelandvisaresult #ireland #AIforgood #studentinireland #irelandeducation #NCIcollege #NCI
+    """)
+
+# ── Error fallback ────────────────────────────────────────────────────────────
+with st.expander("⚠️ If any error click on me"):
+    st.markdown("""
+    1. Visit the [original website](https://www.ireland.ie) and check your embassy page directly.
+    2. Mostly the error is due to the file not being available on the server.
+       Once the embassy website has the file, this application will work.
+    3. Try the individual embassy apps if one embassy is causing issues.
+    """)
+
 with st.spinner("Loading visa decisions from all embassies…"):
     all_data = load_all_embassies()
 
