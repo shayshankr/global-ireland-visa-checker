@@ -94,28 +94,28 @@ def _parse_pdf(content: bytes) -> pd.DataFrame:
     if rows:
         return pd.DataFrame(rows)
 
-    # ── Attempt 2: OCR fallback for image/scanned PDFs ────────────────────────
+    # ── Attempt 2: easyocr fallback for image/scanned PDFs ───────────────────
     try:
         import fitz
-        import pytesseract
-        from PIL import Image
-        import io as _io
-        import re
+        import easyocr
+        import numpy as np
 
+        reader = easyocr.Reader(['en'], gpu=False, verbose=False)
         doc = fitz.open(stream=content, filetype="pdf")
         for page in doc:
-            mat = fitz.Matrix(2.5, 2.5)
+            mat = fitz.Matrix(2.0, 2.0)
             pix = page.get_pixmap(matrix=mat)
-            img = Image.open(_io.BytesIO(pix.tobytes("png")))
-            text = pytesseract.image_to_string(img, config="--psm 6")
-            for line in text.splitlines():
-                line = line.strip()
-                m = re.match(r'^(\d{7,9})\s+(Approved|Refused|Granted|Rejected)', line, re.IGNORECASE)
-                if m:
-                    rows.append({
-                        "Application Number": m.group(1),
-                        "Decision": m.group(2).capitalize()
-                    })
+            img_array = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width, pix.n)
+            results = reader.readtext(img_array, detail=0, paragraph=False)
+            texts = [t.strip() for t in results]
+            for i, text in enumerate(texts):
+                if re.match(r'^\d{7,9}$', text) and i + 1 < len(texts):
+                    decision = texts[i + 1].strip()
+                    if re.match(r'^(Approved|Refused|Granted|Rejected)$', decision, re.IGNORECASE):
+                        rows.append({
+                            "Application Number": text,
+                            "Decision": decision.capitalize()
+                        })
     except Exception:
         pass
 
