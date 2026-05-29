@@ -4,3 +4,6 @@ pandas
 beautifulsoup4
 pdfplumber
 odfpy
+PyMuPDF
+pytesseract
+Pillow
