@@ -1,5 +1,4 @@
 import re
-import threading
 import requests
 import pandas as pd
 from io import BytesIO
@@ -11,22 +10,20 @@ from cache import (
     check_etag, etag_unchanged
 )
 
-# ── easyocr singleton (thread-safe lazy init) ─────────────────────────────────
-# easyocr downloads a ~70 MB model on first use.  If multiple threads try to
-# initialise it simultaneously (ThreadPoolExecutor fetching all embassies in
-# parallel) the download clashes and the reader silently fails.  One lock +
-# one shared instance avoids that.
-_ocr_lock = threading.Lock()
+# ── easyocr singleton — initialised at module import time ─────────────────────
+# easyocr downloads a ~70 MB model on first use.  Initialising it inside
+# ThreadPoolExecutor threads causes the download to happen simultaneously
+# across multiple threads which breaks silently.  We init once here, at import
+# time (before any threads start), so every thread reuses the same reader.
 _ocr_reader = None
+try:
+    import easyocr as _easyocr_mod
+    _ocr_reader = _easyocr_mod.Reader(['en'], gpu=False, verbose=False)
+except Exception:
+    _ocr_reader = None  # OCR unavailable; PDF embassies will skip scanned files
 
 
 def _get_ocr_reader():
-    global _ocr_reader
-    if _ocr_reader is None:
-        with _ocr_lock:
-            if _ocr_reader is None:
-                import easyocr
-                _ocr_reader = easyocr.Reader(['en'], gpu=False, verbose=False)
     return _ocr_reader
 
 HEADERS = {

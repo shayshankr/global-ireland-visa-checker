@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 
-CACHE_DIR = Path(__file__).parent / ".cache_v3"
+CACHE_DIR = Path(__file__).parent / ".cache_v4"
 CACHE_DIR.mkdir(exist_ok=True)
 
 MAX_AGE_HOURS = 24  # Only re-check server after this many hours
