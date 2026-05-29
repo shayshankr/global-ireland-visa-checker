@@ -1,4 +1,5 @@
 import re
+import threading
 import requests
 import pandas as pd
 from io import BytesIO
@@ -9,6 +10,24 @@ from cache import (
     load_from_disk, save_to_disk, is_cache_fresh,
     check_etag, etag_unchanged
 )
+
+# ── easyocr singleton (thread-safe lazy init) ─────────────────────────────────
+# easyocr downloads a ~70 MB model on first use.  If multiple threads try to
+# initialise it simultaneously (ThreadPoolExecutor fetching all embassies in
+# parallel) the download clashes and the reader silently fails.  One lock +
+# one shared instance avoids that.
+_ocr_lock = threading.Lock()
+_ocr_reader = None
+
+
+def _get_ocr_reader():
+    global _ocr_reader
+    if _ocr_reader is None:
+        with _ocr_lock:
+            if _ocr_reader is None:
+                import easyocr
+                _ocr_reader = easyocr.Reader(['en'], gpu=False, verbose=False)
+    return _ocr_reader
 
 HEADERS = {
     "User-Agent": (
@@ -97,15 +116,15 @@ def _parse_pdf(content: bytes) -> pd.DataFrame:
     # ── Attempt 2: easyocr fallback for image/scanned PDFs ───────────────────
     try:
         import fitz
-        import easyocr
         import numpy as np
 
-        reader = easyocr.Reader(['en'], gpu=False, verbose=False)
+        reader = _get_ocr_reader()   # thread-safe singleton — no parallel re-init
         doc = fitz.open(stream=content, filetype="pdf")
         for page in doc:
             mat = fitz.Matrix(2.0, 2.0)
-            pix = page.get_pixmap(matrix=mat)
-            img_array = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width, pix.n)
+            # Force RGB (3 channels) — avoids RGBA shape mismatch on some builds
+            pix = page.get_pixmap(matrix=mat, colorspace=fitz.csRGB)
+            img_array = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width, 3)
             results = reader.readtext(img_array, detail=0, paragraph=False)
             texts = [t.strip() for t in results]
             for i, text in enumerate(texts):
