@@ -186,11 +186,14 @@ def fetch_embassy(embassy: dict) -> dict:
         # ── Step 3: Download fresh data ────────────────────────────────────────
         frames = []
         report_labels = []
+        parsed_url = latest_url  # will be updated to the actually-parsed file URL
+        etag = None
+        last_modified = None
         for item in links:
             try:
                 r = _get_with_retry(item["url"], timeout=60, retries=2)
-                etag = r.headers.get("ETag")
-                last_modified = r.headers.get("Last-Modified")
+                item_etag = r.headers.get("ETag")
+                item_last_modified = r.headers.get("Last-Modified")
 
                 df_part = _parse_ods(r.content) if embassy["type"] == "ods" else _parse_pdf(r.content)
 
@@ -199,6 +202,10 @@ def fetch_embassy(embassy: dict) -> dict:
                     df_part["Report"] = item["label"]
                     frames.append(df_part)
                     report_labels.append(item["label"])
+                    # Track the URL we actually parsed (not necessarily the newest)
+                    parsed_url = item["url"]
+                    etag = item_etag
+                    last_modified = item_last_modified
                     # For PDFs: stop at first parseable file (skip scanned/image PDFs)
                     if embassy["type"] == "pdf":
                         break
@@ -213,8 +220,9 @@ def fetch_embassy(embassy: dict) -> dict:
         combined.drop_duplicates(subset=["Application Number"], keep="last", inplace=True)
         combined.reset_index(drop=True, inplace=True)
 
-        # Save to disk for next time
-        save_to_disk(name, combined, latest_url, etag, last_modified, report_labels)
+        # Save to disk — use parsed_url (the file we actually read), not latest_url.
+        # This ensures next run sees a URL mismatch if a newer file is published.
+        save_to_disk(name, combined, parsed_url, etag, last_modified, report_labels)
 
         result.update({
             "status": "ok",
