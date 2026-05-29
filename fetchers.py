@@ -113,15 +113,21 @@ def _parse_pdf(content: bytes) -> pd.DataFrame:
     # ── Attempt 2: easyocr fallback for image/scanned PDFs ───────────────────
     try:
         import fitz
+        import easyocr
         import numpy as np
 
-        reader = _get_ocr_reader()   # thread-safe singleton — no parallel re-init
+        # Use pre-initialised singleton; fall back to inline init if it failed
+        reader = _get_ocr_reader()
+        if reader is None:
+            reader = easyocr.Reader(['en'], gpu=False, verbose=False)
+
         doc = fitz.open(stream=content, filetype="pdf")
         for page in doc:
             mat = fitz.Matrix(2.0, 2.0)
-            # Force RGB (3 channels) — avoids RGBA shape mismatch on some builds
-            pix = page.get_pixmap(matrix=mat, colorspace=fitz.csRGB)
-            img_array = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width, 3)
+            pix = page.get_pixmap(matrix=mat)
+            img_array = np.frombuffer(pix.samples, dtype=np.uint8).reshape(
+                pix.height, pix.width, pix.n
+            )
             results = reader.readtext(img_array, detail=0, paragraph=False)
             texts = [t.strip() for t in results]
             for i, text in enumerate(texts):
