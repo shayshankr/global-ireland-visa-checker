@@ -121,10 +121,6 @@ def fetch_embassy(embassy: dict) -> dict:
             result["error"] = f"No {embassy['file_ext'].upper()} files found on page."
             return result
 
-        # PDF = weekly reports → only latest; ODS = cumulative → take all (usually 1)
-        if embassy["type"] == "pdf":
-            links = links[:1]
-
         latest_url = links[0]["url"]
         latest_label = links[0]["label"]
 
@@ -172,6 +168,9 @@ def fetch_embassy(embassy: dict) -> dict:
                     df_part["Report"] = item["label"]
                     frames.append(df_part)
                     report_labels.append(item["label"])
+                    # For PDFs: stop at first parseable file (skip scanned/image PDFs)
+                    if embassy["type"] == "pdf":
+                        break
             except Exception as e:
                 report_labels.append(f"⚠️ {item['label']} — failed: {e}")
 
