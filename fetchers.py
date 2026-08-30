@@ -83,7 +83,13 @@ def _parse_ods(content: bytes) -> pd.DataFrame:
     df.dropna(how="all", inplace=True)
     df = df[df["Application Number"].astype(str).str.strip().str.lower() != "application number"]
     df.reset_index(drop=True, inplace=True)
-    df["Application Number"] = df["Application Number"].astype(str).str.strip()
+    # pandas/odf reads purely-numeric cells (the common case for application
+    # numbers) as floats, so str() renders them as "63690452.0" instead of
+    # "63690452". Strip a trailing ".0" so lookups/searches match correctly.
+    df["Application Number"] = (
+        df["Application Number"].astype(str).str.strip()
+        .str.replace(r'\.0$', '', regex=True)
+    )
     df["Decision"] = df["Decision"].astype(str).str.strip()
     return df
 
