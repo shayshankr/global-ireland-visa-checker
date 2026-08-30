@@ -1,3 +1,4 @@
+import html
 import re
 import pandas as pd
 import streamlit as st
@@ -52,11 +53,12 @@ def validate_input(raw: str) -> tuple[bool, str, str]:
 # ── HTML table helpers ────────────────────────────────────────────────────────
 
 def decision_badge(decision_val: str) -> str:
+    safe_val = html.escape(decision_val)
     if "approv" in decision_val.lower() or "grant" in decision_val.lower():
-        return f'<span style="color:#1e7e34;font-weight:600">{decision_val}</span>'
+        return f'<span style="color:#1e7e34;font-weight:600">{safe_val}</span>'
     elif "refus" in decision_val.lower() or "reject" in decision_val.lower():
-        return f'<span style="color:#c0392b;font-weight:600">{decision_val}</span>'
-    return decision_val
+        return f'<span style="color:#c0392b;font-weight:600">{safe_val}</span>'
+    return safe_val
 
 
 def html_nearest_table(dataframe: pd.DataFrame) -> str:
@@ -64,11 +66,11 @@ def html_nearest_table(dataframe: pd.DataFrame) -> str:
     for _, row in dataframe.iterrows():
         rows += (
             f"<tr>"
-            f"<td style='padding:6px'>{row['Nearest Application']}</td>"
-            f"<td style='padding:6px;text-align:right'>{row['Application Number']}</td>"
+            f"<td style='padding:6px'>{html.escape(str(row['Nearest Application']))}</td>"
+            f"<td style='padding:6px;text-align:right'>{html.escape(str(row['Application Number']))}</td>"
             f"<td style='padding:6px'>{decision_badge(str(row['Decision']))}</td>"
-            f"<td style='padding:6px'>{row['Source']}</td>"
-            f"<td style='padding:6px;text-align:right'>{row['Difference']}</td>"
+            f"<td style='padding:6px'>{html.escape(str(row['Source']))}</td>"
+            f"<td style='padding:6px;text-align:right'>{html.escape(str(row['Difference']))}</td>"
             f"</tr>"
         )
     return (
@@ -272,13 +274,17 @@ with st.expander("📊 Per-embassy breakdown"):
     rows_html = ""
     for name, r in all_data.items():
         if r["status"] == "ok":
-            counts = r["df"]["Decision"].value_counts()
-            approved_c = int(counts.get("Approved", counts.get("Granted", 0)))
-            refused_c = int(counts.get("Refused", counts.get("Rejected", 0)))
+            # Use the same case-insensitive substring match as the combined
+            # stats above, instead of an exact value_counts() lookup — the
+            # latter silently reported 0/0 whenever decision text didn't
+            # exactly equal "Approved"/"Refused"/"Granted"/"Rejected".
+            decisions_lower = r["df"]["Decision"].str.lower()
+            approved_c = int(decisions_lower.str.contains("approv|grant").sum())
+            refused_c = int(decisions_lower.str.contains("refus|reject").sum())
             total_c = len(r["df"])
             rows_html += (
                 f"<tr>"
-                f"<td style='padding:8px;font-weight:600'>{name}</td>"
+                f"<td style='padding:8px;font-weight:600'>{html.escape(name)}</td>"
                 f"<td style='padding:8px;text-align:center'>{total_c:,}</td>"
                 f"<td style='padding:8px;text-align:center;color:#1e7e34;font-weight:600'>{approved_c:,}</td>"
                 f"<td style='padding:8px;text-align:center;color:#c0392b;font-weight:600'>{refused_c:,}</td>"
@@ -288,8 +294,8 @@ with st.expander("📊 Per-embassy breakdown"):
         else:
             rows_html += (
                 f"<tr>"
-                f"<td style='padding:8px;font-weight:600'>{name}</td>"
-                f"<td colspan='3' style='padding:8px;color:#c0392b'>{r['error']}</td>"
+                f"<td style='padding:8px;font-weight:600'>{html.escape(name)}</td>"
+                f"<td colspan='3' style='padding:8px;color:#c0392b'>{html.escape(str(r['error']))}</td>"
                 f"<td style='padding:8px;text-align:center'>❌</td>"
                 f"</tr>"
             )
